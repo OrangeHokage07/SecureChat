@@ -1,0 +1,59 @@
+// Secure Image Sharing Chat System
+digraph {
+	Start [label=START]
+	Visit [label="User Visits Homepage"]
+	HasAcc [label="Has Account?"]
+	Signup [label="Fill Signup Form
+(Username, Password, Role)"]
+	SubscriberCheck [label="Is Role = Subscriber?"]
+	GenKey [label="Generate RSA Key
+(Save PEM file)"]
+	SaveUser [label="Save User to DB"]
+	LoginPage [label="Redirect to Login Page"]
+	Login [label="Login with Username & Password"]
+	ValidCred [label="Are Credentials Valid?"]
+	Error [label="Login Failed
+Show Error Message"]
+	Dashboard [label="Redirect to Dashboard"]
+	Admin [label="Admin Dashboard"]
+	Upload [label="Upload Image
+[Encrypt? Checkbox]"]
+	StoreFile [label="Store File Info in DB & uploads/"]
+	Subscriber [label="Subscriber Dashboard"]
+	ViewBlur [label="View Encrypted Image (Blurred)"]
+	UploadKey [label="Upload PEM Key"]
+	ValidKey [label="Is Key Valid?"]
+	ShowImage [label="Unlock Image"]
+	InvalidKey [label="Show Key Error"]
+	User [label="Regular User Dashboard"]
+	PublicOnly [label="Can View Public Images Only"]
+	PromptSub [label="\"Subscribe to view encrypted files\""]
+	Logout [label="Logout → Clear Session"]
+	End [label=END]
+	Start -> Visit
+	Visit -> HasAcc
+	HasAcc -> Signup [label=No]
+	Signup -> SubscriberCheck
+	SubscriberCheck -> GenKey [label=Yes]
+	SubscriberCheck -> SaveUser [label=No]
+	GenKey -> SaveUser
+	SaveUser -> LoginPage
+	HasAcc -> Login [label=Yes]
+	Login -> ValidCred
+	ValidCred -> Error [label=No]
+	ValidCred -> Dashboard [label=Yes]
+	Dashboard -> Admin [label="Role = Admin"]
+	Admin -> Upload
+	Upload -> StoreFile
+	Dashboard -> Subscriber [label="Role = Subscriber"]
+	Subscriber -> ViewBlur
+	ViewBlur -> UploadKey
+	UploadKey -> ValidKey
+	ValidKey -> ShowImage [label=Yes]
+	ValidKey -> InvalidKey [label=No]
+	Dashboard -> User [label="Role = Regular User"]
+	User -> PublicOnly
+	User -> PromptSub
+	Dashboard -> Logout
+	Logout -> End
+}

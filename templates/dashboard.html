@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pokémon Cards Gallery</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    h1 {
+      margin: 20px;
+    }
+    .dashboard {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      width: 90%;
+      margin: auto;
+    }
+    .sidebar {
+      width: 25%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .logout-btn {
+      background: #dc3545;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .gallery {
+      flex: 1;
+      background: #fff3cd;
+      border-radius: 15px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .gallery img {
+      width: 100%;
+      border-radius: 10px;
+    }
+    .blurred {
+      filter: blur(8px);
+      position: relative;
+      cursor: pointer;
+    }
+    .blurred:hover {
+      filter: blur(4px);
+    }
+    .hidden-text {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+      position: relative;
+    }
+    .modal-content input {
+      margin-top: 10px;
+    }
+    .modal-content button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px; right: 15px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 16px;
+      width: 25px; height: 25px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Pokémon Cards Gallery</h1>
+
+<div class="dashboard">
+  <div class="sidebar">
+    <div class="box">
+      <h3>Welcome, {{ user }}</h3>
+      <p><strong>Role:</strong> {{ role }}</p>
+      <button class="logout-btn" onclick="location.href='{{ url_for('logout') }}'">Logout</button>
+    </div>
+
+    {% if role == 'admin' %}
+    <div class="box">
+      <h3>Upload File</h3>
+      <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required><br>
+        <label><input type="checkbox" name="encrypt"> Encrypt File</label><br>
+        <button type="submit">Upload</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if role == 'subscriber' %}
+    <div class="box">
+      <h3>Your Certificate</h3>
+      <a href="{{ url_for('generate_certificate') }}">Download Private Key</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="gallery">
+        {% for file in files %}
+            <div>
+            {% if file.encrypted and role != 'admin' %}
+                <div class="blurred" onclick="handleEncryptedClick(this, '{{ role }}', '{{ url_for('view_file', filename=file.filename) }}')">
+                <img src="{{ url_for('view_file', filename=file.filename) }}">
+                 <span class="hidden-text">🔒 Encrypted</span>
+            </div>
+        {% else %}
+        <img src="{{ url_for('view_file', filename=file.filename) }}">
+        {% endif %}
+      
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal for private key upload -->
+<div class="modal" id="keyModal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3>Upload Private Key</h3>
+    <input type="file" id="privateKeyInput" accept=".pem">
+    <button onclick="verifyKey()">Unlock File</button>
+  </div>
+</div>
+
+<script>
+  let currentBlurredDiv = null;
+  let targetFileUrl = "";
+
+  function handleEncryptedClick(element, role, fileUrl) {
+    if (role !== "subscriber") {
+      alert("This file is only for subscribers.");
+      return;
+    }
+    currentBlurredDiv = element;
+    targetFileUrl = fileUrl;
+    document.getElementById("keyModal").style.display = "flex";
+  }
+
+  function verifyKey() {
+    const input = document.getElementById("privateKeyInput");
+    if (!input.files.length) {
+      alert("Please upload a private key.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      if (content.includes("PRIVATE KEY")) {
+        alert("Key verified!");
+        // Remove blur
+        currentBlurredDiv.classList.remove("blurred");
+        const label = currentBlurredDiv.querySelector(".hidden-text");
+        if (label) label.style.display = "none";
+        // Optional: open in new tab
+        window.open(targetFileUrl, "_blank");
+        closeModal();
+      } else {
+        alert("Invalid key.");
+      }
+    };
+    reader.readAsText(input.files[0]);
+  }
+
+  function closeModal() {
+    document.getElementById("keyModal").style.display = "none";
+    document.getElementById("privateKeyInput").value = "";
+  }
+</script>
+
+</body>
+</html>
